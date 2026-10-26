@@ -359,14 +359,11 @@ function renderDetail() {
   ].join('');
 
   const turns = state.detail.preview?.turns || [];
+  const tight = (text) => String(text ?? '').replace(/^[\s\u200b]+/, '').replace(/[\s\u200b]+$/, '');
   $('#chat').innerHTML = turns.map((turn) => `
     <div class="turn">
-      <div class="bubble bubble-user" dir="auto">
-        <div class="bubble-role">${t('roleUser')}</div>${escapeHtml(turn.user)}
-      </div>
-      <div class="bubble bubble-assistant" dir="auto">
-        <div class="bubble-role">${t('roleAssistant')}</div>${escapeHtml(turn.assistant)}
-      </div>
+      <div class="bubble bubble-user" dir="auto"><div class="bubble-role">${t('roleUser')}</div>${escapeHtml(tight(turn.user))}</div>
+      <div class="bubble bubble-assistant" dir="auto"><div class="bubble-role">${t('roleAssistant')}</div>${escapeHtml(tight(turn.assistant))}</div>
     </div>`).join('') + `<div class="chat-foot">${
       (state.detail.preview?.totalTurns || 0) > turns.length
         ? t('moreTurns', state.detail.preview.totalTurns - turns.length)

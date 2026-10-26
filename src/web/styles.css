@@ -574,7 +574,8 @@ html[dir="rtl"] .switch input:checked + .switch-track .switch-thumb { transform:
 .bubble-role {
   font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--muted-foreground);
-  margin-bottom: 4px;
+  line-height: 1.15;
+  margin: 0 0 1px;
 }
 html[dir="rtl"] .bubble-role { letter-spacing: normal; }
 

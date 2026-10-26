@@ -35,6 +35,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Message bubbles no longer render a leading or trailing blank line: the preview
+  text is trimmed and the HTML template no longer injects whitespace into a
+  `pre-wrap` bubble.
 - Session rows truncate correctly inside the sidebar.
 - Persian/Arabic text keeps its direction inside an otherwise LTR interface.
 - Binary-safe UTF-8 handling for the web assets (no BOM, no mojibake).
