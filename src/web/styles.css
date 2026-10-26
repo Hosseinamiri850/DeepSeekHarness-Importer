@@ -100,6 +100,29 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
+/* ---------- fonts ---------- */
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/Vazirmatn-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/Vazirmatn-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("/fonts/Vazirmatn-Bold.woff2") format("woff2");
+}
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { height: 100%; }
@@ -115,7 +138,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-html[dir="rtl"] body { font-family: "Vazirmatn", "Segoe UI", Tahoma, var(--font); }
+html[dir="rtl"] body {
+  font-family: "Vazirmatn", "Segoe UI", Tahoma, var(--font);
+  line-height: 1.7;
+}
 
 ::selection { background: var(--accent-soft-2); color: var(--foreground); }
 
@@ -167,12 +193,9 @@ button { font: inherit; color: inherit; }
 .brand-mark {
   width: 34px; height: 34px;
   display: grid; place-items: center;
-  border-radius: 10px;
-  color: #fff;
-  background: linear-gradient(145deg, #4176e6, #7aaaff);
   flex: none;
 }
-.brand-mark svg { width: 22px; height: 22px; }
+.brand-mark img { width: 34px; height: 34px; display: block; }
 
 .brand-name {
   font-size: 15px;

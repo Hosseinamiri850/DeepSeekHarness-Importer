@@ -65,7 +65,8 @@ things that make a hand-made session invisible:
 - **Bilingual UI** (English / فارسی, RTL-aware) with light and dark themes, built
   on a shadcn-style token system in plain CSS — no build step, no dependencies.
   The palette is taken from DeepSeek Harness' own theme tokens
-  (`neutral-bluish` surfaces, near-black brand action, DeepSeek blue accent).
+  (`neutral-bluish` surfaces, near-black brand action, DeepSeek blue accent), and
+  the Persian interface ships the Vazirmatn font locally.
 
 ## Quick start
 
