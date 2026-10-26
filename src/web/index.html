@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude → DeepSeek Harness Importer</title>
+  <meta name="description" content="Browse your Claude sessions and move them into DeepSeek Harness as resumable sessions." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" role="img">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6f8dff" />
+              <stop offset="1" stop-color="#9b6bff" />
+            </linearGradient>
+          </defs>
+          <rect x="1" y="1" width="30" height="30" rx="9" fill="url(#g)" opacity=".16" />
+          <path d="M10 21.5c2.6 0 4-1.6 4-4V10" stroke="url(#g)" stroke-width="2.4" stroke-linecap="round" fill="none" />
+          <path d="M18 10.5c0 3.4 1.5 5 4 5h2" stroke="url(#g)" stroke-width="2.4" stroke-linecap="round" fill="none" />
+          <circle cx="22.5" cy="21.5" r="1.8" fill="url(#g)" />
+        </svg>
+      </div>
+      <div class="brand-text">
+        <strong>Claude → DeepSeek Harness</strong>
+        <span data-i18n="tagline">Session importer</span>
+      </div>
+      <span class="badge-soft">v0.1</span>
+    </div>
+
+    <div class="topbar-right">
+      <div class="status-pills" id="statusPills" aria-live="polite"></div>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button data-lang="en" class="active">EN</button>
+        <button data-lang="fa">فا</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ── Sessions ─────────────────────────────────────────────── -->
+    <section class="panel panel-sessions" aria-labelledby="sessionsTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="sessionsTitle" data-i18n="sessionsTitle">Claude sessions</h2>
+          <p class="muted" id="sessionsMeta" data-i18n="sessionsMeta">Scanning…</p>
+        </div>
+        <button class="ghost-btn" id="refreshBtn" title="Rescan" data-i18n-title="rescan">⟳</button>
+      </div>
+
+      <div class="search-row">
+        <input id="search" type="search" data-i18n-placeholder="searchPlaceholder" placeholder="Search sessions…" autocomplete="off" />
+        <kbd>/</kbd>
+      </div>
+
+      <div class="filters">
+        <button class="chip active" data-filter="all" data-i18n="filterAll">All</button>
+        <button class="chip" data-filter="claude-code" data-i18n="filterCode">Claude Code</button>
+        <button class="chip" data-filter="claude-export" data-i18n="filterExport">Export</button>
+        <label class="toggle" title="Show subagent transcripts">
+          <input type="checkbox" id="sidechains" />
+          <span data-i18n="subagents">Subagents</span>
+        </label>
+        <button class="link-btn" id="uploadBtn" data-i18n="uploadExport">Upload export</button>
+        <input type="file" id="fileInput" accept="application/json,.json" hidden />
+      </div>
+
+      <ul class="session-list" id="sessionList" aria-live="polite"></ul>
+
+      <div class="panel-foot">
+        <span class="dot ok"></span>
+        <span class="muted" id="claudeRootLabel">~/.claude/projects</span>
+      </div>
+    </section>
+
+    <!-- ── Preview ─────────────────────────────────────────────── -->
+    <section class="panel panel-detail" id="detailPanel" aria-labelledby="detailTitle">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-glyph" aria-hidden="true">◍</div>
+        <h3 data-i18n="emptyTitle">Pick a session to preview</h3>
+        <p class="muted" data-i18n="emptyBody">Your Claude transcripts stay on this machine. Nothing is uploaded.</p>
+      </div>
+
+      <div class="detail-body" id="detailBody" hidden>
+        <div class="detail-head">
+          <div class="detail-title-wrap">
+            <h2 id="detailTitle" dir="auto">—</h2>
+            <div class="meta-chips" id="detailMeta"></div>
+          </div>
+          <button class="ghost-btn" id="copyIdBtn" data-i18n-title="copyId" title="Copy session id">⧉</button>
+        </div>
+
+        <div class="preview-tabs">
+          <button class="tab active" data-view="conversation" data-i18n="tabConversation">Conversation</button>
+          <button class="tab" data-view="stats" data-i18n="tabStats">Stats</button>
+        </div>
+
+        <div class="transcript" id="transcript"></div>
+        <div class="stats-grid" id="statsGrid" hidden></div>
+      </div>
+    </section>
+
+    <!-- ── Import ──────────────────────────────────────────────── -->
+    <aside class="panel panel-import" aria-labelledby="importTitle">
+      <div class="panel-head">
+        <div>
+          <h2 id="importTitle" data-i18n="importTitle">Import to DSH</h2>
+          <p class="muted" data-i18n="importSubtitle">Writes a native, resumable session.</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="workspaceSelect" data-i18n="workspace">Workspace</label>
+        <select id="workspaceSelect"></select>
+        <p class="hint path" id="workspaceHint"></p>
+      </div>
+
+      <div class="field">
+        <label data-i18n="mode">Install as</label>
+        <div class="segmented" role="radiogroup" aria-label="Install mode">
+          <button class="seg active" data-mode="adopt" data-i18n="modeAdopt">Existing slot</button>
+          <button class="seg" data-mode="register" data-i18n="modeRegister">New session</button>
+        </div>
+        <p class="hint" id="modeHint">Reuses an empty session row, so it appears right away.</p>
+      </div>
+
+      <div class="field" id="slotField">
+        <label for="slotSelect" data-i18n="slot">Target slot</label>
+        <select id="slotSelect"></select>
+        <p class="hint" id="slotHint"></p>
+      </div>
+
+      <div class="field">
+        <label for="maxChars" data-i18n="budget">History budget</label>
+        <select id="maxChars">
+          <option value="50000">50k characters</option>
+          <option value="120000">120k characters</option>
+          <option value="200000" selected>200k characters</option>
+          <option value="400000">400k characters</option>
+          <option value="0">Everything</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="titleInput" data-i18n="title">Session title</label>
+        <input id="titleInput" type="text" data-i18n-placeholder="titlePlaceholder" placeholder="Claude import · project" />
+      </div>
+
+      <button class="primary-btn" id="importBtn" disabled>
+        <span data-i18n="importButton">Import session</span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </button>
+
+      <div class="result" id="result" hidden></div>
+
+      <div class="warn" id="warn" hidden></div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span class="muted" data-i18n="footerLocal">Local-only · no network calls</span>
+    <span class="muted">·</span>
+    <a href="https://github.com/Hosseinamiri850/Claude-to-DeepSeekHarness-Importer" target="_blank" rel="noreferrer">GitHub</a>
+    <span class="muted">·</span>
+    <span class="muted">MIT</span>
+  </footer>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
+
