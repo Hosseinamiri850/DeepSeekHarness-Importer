@@ -14,6 +14,10 @@ All notable changes to this project are documented here. The format follows
 - **Complete dashboard redesign** on a shadcn-style token system with DeepSeek's
   palette: light theme by default, dark theme, chat-style transcript bubbles,
   compact session rows, segmented install mode, inline result card.
+- **Palette aligned with DeepSeek Harness' own theme tokens**
+  (`dsh-client-ui-theme`): neutral-bluish surfaces (`#f9fafb` / `#151517`),
+  near-black brand action in light and near-white in dark, DeepSeek blue
+  (`#4176e6` / `#7aaaff`) as the only accent, DSH borders and radii.
 - Repositioned the product around *sources*: the importer is no longer
   Claude-only by design.
 
