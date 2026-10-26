@@ -8,12 +8,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { claudeRoots, dshHome } from './core/paths.js';
-import { discoverClaudeSessions, parseClaudeCodeFile, parseClaudeExport } from './core/claude.js';
+import { SOURCES, DEFAULT_SOURCE, requireSource, sourceSummaries } from './core/sources.js';
 import { buildSessionRows, estimateTokens, validateRows, DEFAULT_MAX_CHARS } from './core/convert.js';
 import { describeDsh, registerSession, writeSessionLog } from './core/dsh.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.join(__dirname, 'web');
+const VERSION = '0.2.0';
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -24,8 +25,10 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
 };
 
-/** Sessions parsed from an uploaded Claude export, keyed by id. */
+/** Sessions parsed from an uploaded export, keyed by id. */
 const exportSessions = new Map();
+/** Cache of discovery runs, keyed by source id. */
+const discoveryCache = new Map();
 
 function json(res, status, body) {
   const payload = JSON.stringify(body);
@@ -59,6 +62,7 @@ function sessionSummary(session) {
   return {
     id: session.id,
     source: session.source,
+    sourceId: session.sourceId || DEFAULT_SOURCE,
     sourceLabel: session.sourceLabel,
     name: session.name,
     project: session.project,
@@ -73,17 +77,34 @@ function sessionSummary(session) {
   };
 }
 
-function listAllSessions(includeSidechains) {
-  const local = discoverClaudeSessions({ includeSidechains }).map(sessionSummary);
-  const exported = [...exportSessions.values()].map(sessionSummary);
+function discover(sourceId, { includeSidechains = false, fresh = false } = {}) {
+  const source = requireSource(sourceId);
+  const key = `${source.id}:${includeSidechains}`;
+  const cached = discoveryCache.get(key);
+  if (!fresh && cached && Date.now() - cached.at < 15000) return cached.sessions;
+  const sessions = source.discover({ includeSidechains }).map((session) => ({
+    ...session,
+    sourceId: source.id,
+  }));
+  discoveryCache.set(key, { at: Date.now(), sessions });
+  return sessions;
+}
+
+function listAllSessions(sourceId, includeSidechains) {
+  const local = discover(sourceId, { includeSidechains, fresh: false }).map(sessionSummary);
+  const exported = [...exportSessions.values()]
+    .filter((session) => (session.sourceId || DEFAULT_SOURCE) === sourceId)
+    .map(sessionSummary);
   return [...exported, ...local];
 }
 
-function findSession(id) {
+function findSession(sourceId, id) {
+  const source = requireSource(sourceId);
   if (exportSessions.has(id)) return exportSessions.get(id);
-  const local = discoverClaudeSessions({ includeSidechains: true }).find((session) => session.id === id);
+  const local = discover(source.id, { includeSidechains: true, fresh: false })
+    .find((session) => session.id === id);
   if (!local) return null;
-  return { ...local, turns: parseClaudeCodeFile(local.file).turns };
+  return { ...local, turns: source.load(local) };
 }
 
 function previewOf(session, { maxTurns = 40, maxCharsPerMessage = 2500 } = {}) {
@@ -94,6 +115,8 @@ function previewOf(session, { maxTurns = 40, maxCharsPerMessage = 2500 } = {}) {
   return { totalTurns: session.turns.length, shown: turns.length, turns };
 }
 
+const clientError = (message, statusCode) => Object.assign(new Error(message), { statusCode });
+
 async function handleApi(req, res, url) {
   const home = dshHome();
 
@@ -101,8 +124,13 @@ async function handleApi(req, res, url) {
     const roots = claudeRoots();
     return json(res, 200, {
       ok: true,
-      version: '0.1.0',
+      version: VERSION,
       node: process.version,
+      sources: {
+        default: DEFAULT_SOURCE,
+        claudeRoot: roots.projects,
+        claudeExists: fs.existsSync(roots.projects),
+      },
       dsh: {
         home: home.dir,
         sessionsRoot: home.sessions,
@@ -111,22 +139,26 @@ async function handleApi(req, res, url) {
         hasRegistry: home.hasRegistry,
         webUrl: process.env.DSH_WEB_URL || '',
       },
-      claude: {
-        projects: roots.projects,
-        exists: fs.existsSync(roots.projects),
-      },
     });
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/sources') {
+    return json(res, 200, { ok: true, default: DEFAULT_SOURCE, sources: sourceSummaries() });
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/sessions') {
+    const sourceId = url.searchParams.get('source') || DEFAULT_SOURCE;
     const includeSidechains = url.searchParams.get('sidechains') === '1';
-    const sessions = listAllSessions(includeSidechains);
-    return json(res, 200, { ok: true, count: sessions.length, sessions });
+    const fresh = url.searchParams.get('fresh') === '1';
+    if (fresh) discoveryCache.clear();
+    const sessions = listAllSessions(sourceId, includeSidechains);
+    return json(res, 200, { ok: true, source: sourceId, count: sessions.length, sessions });
   }
 
   if (req.method === 'GET' && url.pathname.startsWith('/api/sessions/')) {
     const id = decodeURIComponent(url.pathname.slice('/api/sessions/'.length));
-    const session = findSession(id);
+    const sourceId = url.searchParams.get('source') || DEFAULT_SOURCE;
+    const session = findSession(sourceId, id);
     if (!session) return json(res, 404, { ok: false, error: 'session not found' });
     return json(res, 200, {
       ok: true,
@@ -141,13 +173,17 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/export') {
     const body = JSON.parse(await readBody(req));
+    const source = requireSource(body.source || DEFAULT_SOURCE);
+    if (typeof source.parseExport !== 'function') {
+      throw clientError(`${source.label} does not support file exports yet`, 501);
+    }
     let parsed;
     try {
       parsed = JSON.parse(body.json);
     } catch {
       return json(res, 400, { ok: false, error: 'file is not valid JSON' });
     }
-    const sessions = parseClaudeExport(parsed);
+    const sessions = source.parseExport(parsed).map((session) => ({ ...session, sourceId: source.id }));
     for (const session of sessions) exportSessions.set(session.id, session);
     return json(res, 200, {
       ok: true,
@@ -158,7 +194,8 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/import') {
     const body = JSON.parse(await readBody(req));
-    const session = findSession(body.sessionId);
+    const source = requireSource(body.source || DEFAULT_SOURCE);
+    const session = findSession(source.id, body.sessionId);
     if (!session) return json(res, 404, { ok: false, error: 'session not found' });
 
     const dsh = describeDsh(home);
@@ -187,7 +224,7 @@ async function handleApi(req, res, url) {
       targetId = `session-${randomUUID()}`;
     }
 
-    const title = body.title || `Claude import · ${path.basename(workspacePath) || 'session'}`;
+    const title = body.title || `${source.label} import · ${path.basename(workspacePath) || 'session'}`;
     const built = buildSessionRows({
       turns: session.turns,
       cwd: workspacePath,
@@ -204,6 +241,7 @@ async function handleApi(req, res, url) {
     return json(res, 200, {
       ok: true,
       mode,
+      source: source.id,
       sessionId: targetId,
       file: written.file,
       backup: written.backup,
@@ -244,7 +282,7 @@ export function createServer() {
       if (url.pathname.startsWith('/api/')) return await handleApi(req, res, url);
       return serveStatic(req, res, url);
     } catch (error) {
-      return json(res, 500, { ok: false, error: error?.message || 'internal error' });
+      return json(res, error?.statusCode || 500, { ok: false, error: error?.message || 'internal error' });
     }
   });
 }
@@ -258,3 +296,5 @@ export function startServer({ port = 0, host = '127.0.0.1' } = {}) {
     });
   });
 }
+
+export { SOURCES };

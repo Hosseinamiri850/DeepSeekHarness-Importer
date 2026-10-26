@@ -1,19 +1,20 @@
 {
-  "name": "claude-to-dsh-importer",
-  "version": "0.1.0",
-  "description": "Move Claude conversations into DeepSeek Harness as native, resumable sessions — with a local dashboard.",
+  "name": "deepseekharness-importer",
+  "version": "0.2.0",
+  "description": "Bring conversations from other AI tools into DeepSeek Harness as native, resumable sessions — starting with Claude.",
   "type": "module",
   "license": "MIT",
   "author": "Hossein Amiri",
-  "homepage": "https://github.com/Hosseinamiri850/Claude-to-DeepSeekHarness-Importer#readme",
+  "homepage": "https://github.com/Hosseinamiri850/DeepSeekHarness-Importer#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Hosseinamiri850/Claude-to-DeepSeekHarness-Importer.git"
+    "url": "git+https://github.com/Hosseinamiri850/DeepSeekHarness-Importer.git"
   },
   "bugs": {
-    "url": "https://github.com/Hosseinamiri850/Claude-to-DeepSeekHarness-Importer/issues"
+    "url": "https://github.com/Hosseinamiri850/DeepSeekHarness-Importer/issues"
   },
   "keywords": [
+    "deepseek",
     "deepseek-harness",
     "dsh",
     "claude",
@@ -21,13 +22,16 @@
     "claude-desktop",
     "session",
     "migration",
-    "importer"
+    "importer",
+    "chatgpt",
+    "gemini",
+    "cursor"
   ],
   "engines": {
     "node": ">=22.15.0"
   },
   "bin": {
-    "claude-to-dsh": "src/cli.js"
+    "deepseekharness-importer": "src/cli.js"
   },
   "files": [
     "src",
@@ -42,4 +46,3 @@
     "test": "node --test \"test/**/*.test.js\""
   }
 }
-

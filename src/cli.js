@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-/** Entry point: `claude-to-dsh [--port 4173] [--no-open]`. */
+/** Entry point: `deepseekharness-importer [--port 4173] [--no-open]`. */
 import { spawn } from 'node:child_process';
 import zlib from 'node:zlib';
 import { startServer } from './server.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 function parseArgs(argv) {
   const options = { port: 0, open: true, host: '127.0.0.1' };
@@ -34,12 +34,13 @@ function openBrowser(url) {
 const options = parseArgs(process.argv.slice(2));
 
 if (options.help) {
-  console.log(`claude-to-dsh ${VERSION}
+  console.log(`DeepSeekHarness-Importer ${VERSION}
 
-Move Claude conversations into DeepSeek Harness as resumable sessions.
+Bring conversations from other AI tools into DeepSeek Harness as resumable
+sessions. This version supports Claude; more sources are planned.
 
 Usage
-  claude-to-dsh [options]
+  deepseekharness-importer [options]
 
 Options
   -p, --port <port>   listen on a fixed port (default: a free port)
@@ -67,7 +68,7 @@ if (typeof zlib.zstdCompressSync !== 'function') {
 }
 
 const { url } = await startServer({ port: options.port, host: options.host });
-console.log(`\n  Claude → DeepSeek Harness Importer  ${VERSION}`);
+console.log(`\n  DeepSeekHarness-Importer  ${VERSION}`);
 console.log(`  Dashboard: ${url}`);
 console.log('  Press Ctrl+C to stop.\n');
 if (options.open) openBrowser(url);

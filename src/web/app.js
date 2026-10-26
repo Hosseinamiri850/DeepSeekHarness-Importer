@@ -1,23 +1,25 @@
-/* Claude → DeepSeek Harness Importer — dashboard UI */
+/* DeepSeekHarness-Importer — dashboard UI */
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const I18N = {
   en: {
-    tagline: 'Session importer',
-    sessionsTitle: 'Claude sessions',
-    sessionsMeta: 'Scanning…',
+    sessionsTitle: 'Sessions',
+    scanning: 'Scanning…',
+    source: 'Source',
+    moreSources: 'Coming soon:',
     searchPlaceholder: 'Search sessions…',
     filterAll: 'All',
-    filterCode: 'Claude Code',
+    filterLocal: 'Local',
     filterExport: 'Export',
     subagents: 'Subagents',
-    uploadExport: 'Upload export',
-    emptyTitle: 'Pick a session to preview',
-    emptyBody: 'Your Claude transcripts stay on this machine. Nothing is uploaded.',
+    uploadShort: 'Export',
+    uploadExport: 'Upload a data export',
+    emptyTitle: 'Pick a session',
+    emptyBody: 'Your transcripts stay on this machine. Nothing is uploaded.',
     tabConversation: 'Conversation',
     tabStats: 'Stats',
-    importTitle: 'Import to DSH',
+    importTitle: 'Import to DeepSeek Harness',
     importSubtitle: 'Writes a native, resumable session.',
     workspace: 'Workspace',
     mode: 'Install as',
@@ -29,16 +31,16 @@ const I18N = {
     titlePlaceholder: 'Claude import · project',
     importButton: 'Import session',
     footerLocal: 'Local-only · no network calls',
+    guide: 'User guide',
     rescan: 'Rescan',
     copyId: 'Copy session id',
-    countSessions: (n) => `${n} session${n === 1 ? '' : 's'} found`,
-    noSessions: 'No sessions match your filters.',
-    noSessionsHint: 'Try clearing the search, or upload a Claude data export.',
+    countSessions: (n) => `${n} session${n === 1 ? '' : 's'}`,
+    noSessions: 'No sessions match your filters',
+    noSessionsHint: 'Clear the search, or upload a data export from the source menu.',
     roleUser: 'Human',
     roleAssistant: 'Assistant',
     moreTurns: (n) => `… ${n} earlier turn${n === 1 ? '' : 's'} not shown`,
     shownAll: 'End of transcript',
-    turn: 'turn',
     turns: 'turns',
     chars: 'characters',
     tokens: '≈ tokens',
@@ -46,42 +48,45 @@ const I18N = {
     tools: 'tool calls',
     project: 'project',
     size: 'size',
-    created: 'last active',
+    activity: 'last active',
+    started: 'started',
     adoptHint: 'Reuses an empty session row, so it appears right away.',
-    registerHint: 'Creates a new row. DSH must be restarted once to list it.',
-    noSlots: 'This workspace has no empty slot. Open DSH, click “New session” once, then rescan — or use “New session” mode.',
-    noWorkspace: 'DSH workspace not found. Open DeepSeek Harness once, then rescan.',
+    registerHint: 'Creates a new row. DeepSeek Harness must be restarted once to list it.',
+    noSlots: 'No empty slot in this workspace. Create a session in DeepSeek Harness, then rescan — or use “New session”.',
+    noWorkspace: 'No DeepSeek Harness workspace found. Open DeepSeek Harness once, then rescan.',
     importDone: 'Imported',
     restartNeeded: 'Restart DeepSeek Harness to see the new session in the sidebar.',
-    openIn: 'Open DSH →',
+    openIn: 'Open DeepSeek Harness',
     copy: 'Copy id',
     copied: 'Copied',
     importFailed: 'Import failed',
     importBusy: 'Importing…',
-    forceWarning: 'This slot already has a conversation. Importing overwrites it (a backup is kept).',
     overwriteConfirm: 'Overwrite the existing conversation in this slot?',
-    exportUploaded: (n) => `${n} conversation${n === 1 ? '' : 's'} loaded from the export`,
+    exportUploaded: (n) => `${n} conversation${n === 1 ? '' : 's'} loaded`,
     exportFailed: 'Could not read that file',
-    dshOk: 'DSH',
-    claudeOk: 'Claude',
-    dshMissing: 'DSH home missing',
-    claudeMissing: 'No Claude data found',
+    dsh: 'DSH',
+    dshMissing: 'not found',
+    loading: 'Loading…',
+    soon: 'soon',
+    dropped: (n) => `${n} dropped`,
   },
   fa: {
-    tagline: 'انتقال سشن',
-    sessionsTitle: 'سشن‌های کلاد',
-    sessionsMeta: 'در حال اسکن…',
+    sessionsTitle: 'سشن‌ها',
+    scanning: 'در حال اسکن…',
+    source: 'منبع',
+    moreSources: 'به‌زودی:',
     searchPlaceholder: 'جست‌وجوی سشن…',
     filterAll: 'همه',
-    filterCode: 'Claude Code',
+    filterLocal: 'محلی',
     filterExport: 'خروجی داده',
     subagents: 'ساب‌ایجنت‌ها',
-    uploadExport: 'بارگذاری فایل خروجی',
-    emptyTitle: 'یک سشن را برای پیش‌نمایش انتخاب کن',
+    uploadShort: 'خروجی',
+    uploadExport: 'بارگذاری فایل خروجی داده',
+    emptyTitle: 'یک سشن انتخاب کن',
     emptyBody: 'تاریخچه‌ها روی همین سیستم می‌مانند؛ چیزی به بیرون ارسال نمی‌شود.',
     tabConversation: 'گفتگو',
     tabStats: 'آمار',
-    importTitle: 'انتقال به DSH',
+    importTitle: 'انتقال به DeepSeek Harness',
     importSubtitle: 'یک سشن بومی و قابل ادامه می‌سازد.',
     workspace: 'ورک‌اسپیس',
     mode: 'نصب به‌صورت',
@@ -93,16 +98,16 @@ const I18N = {
     titlePlaceholder: 'Claude import · project',
     importButton: 'انتقال سشن',
     footerLocal: 'کاملاً محلی · بدون تماس شبکه',
+    guide: 'راهنمای کاربر',
     rescan: 'اسکن مجدد',
     copyId: 'کپی شناسه‌ی سشن',
-    countSessions: (n) => `${n} سشن پیدا شد`,
-    noSessions: 'سشنی با این فیلترها پیدا نشد.',
-    noSessionsHint: 'جست‌وجو را پاک کن یا فایل خروجی کلاد را بارگذاری کن.',
+    countSessions: (n) => `${n} سشن`,
+    noSessions: 'سشنی با این فیلترها پیدا نشد',
+    noSessionsHint: 'جست‌وجو را پاک کن یا از منوی منبع، فایل خروجی داده را بارگذاری کن.',
     roleUser: 'انسان',
     roleAssistant: 'دستیار',
     moreTurns: (n) => `… ${n} نوبت قدیمی‌تر نمایش داده نشده`,
     shownAll: 'پایان گفتگو',
-    turn: 'نوبت',
     turns: 'نوبت',
     chars: 'کاراکتر',
     tokens: '≈ توکن',
@@ -110,32 +115,36 @@ const I18N = {
     tools: 'فراخوانی ابزار',
     project: 'پروژه',
     size: 'حجم',
-    created: 'آخرین فعالیت',
+    activity: 'آخرین فعالیت',
+    started: 'شروع',
     adoptHint: 'از یک ردیف خالی موجود استفاده می‌کند؛ بلافاصله دیده می‌شود.',
-    registerHint: 'ردیف جدید می‌سازد؛ برای دیده‌شدن یک بار DSH باید ری‌استارت شود.',
-    noSlots: 'این ورک‌اسپیس جای خالی ندارد. در DSH یک بار «New session» بزن و اسکن کن — یا حالت «سشن جدید» را انتخاب کن.',
-    noWorkspace: 'ورک‌اسپیس DSH پیدا نشد. یک بار DeepSeek Harness را باز کن و اسکن مجدد بزن.',
+    registerHint: 'ردیف جدید می‌سازد؛ DeepSeek Harness یک بار باید ری‌استارت شود.',
+    noSlots: 'این ورک‌اسپیس جای خالی ندارد. در DeepSeek Harness یک سشن بساز و اسکن کن — یا حالت «سشن جدید» را بزن.',
+    noWorkspace: 'ورک‌اسپیس DeepSeek Harness پیدا نشد. یک بار آن را باز کن و اسکن مجدد بزن.',
     importDone: 'منتقل شد',
-    restartNeeded: 'برای دیدن سشن جدید در سایدبار، DeepSeek Harness را ری‌استارت کن.',
-    openIn: 'باز کردن DSH ←',
+    restartNeeded: 'برای دیدن سشن جدید، DeepSeek Harness را ری‌استارت کن.',
+    openIn: 'باز کردن DeepSeek Harness',
     copy: 'کپی شناسه',
     copied: 'کپی شد',
     importFailed: 'انتقال ناموفق',
     importBusy: 'در حال انتقال…',
-    forceWarning: 'این جایگاه از قبل گفتگو دارد. انتقال آن را بازنویسی می‌کند (نسخه‌ی پشتیبان نگه داشته می‌شود).',
     overwriteConfirm: 'گفتگوی موجود در این جایگاه بازنویسی شود؟',
-    exportUploaded: (n) => `${n} گفتگو از فایل خروجی خوانده شد`,
+    exportUploaded: (n) => `${n} گفتگو خوانده شد`,
     exportFailed: 'خواندن فایل ممکن نشد',
-    dshOk: 'DSH',
-    claudeOk: 'Claude',
-    dshMissing: 'پوشه‌ی DSH پیدا نشد',
-    claudeMissing: 'داده‌ای از کلاد پیدا نشد',
+    dsh: 'DSH',
+    dshMissing: 'یافت نشد',
+    loading: 'در حال بارگذاری…',
+    soon: 'به‌زودی',
+    dropped: (n) => `${n} حذف‌شده`,
   },
 };
 
 const state = {
-  lang: localStorage.getItem('cdi.lang') || 'en',
-  theme: localStorage.getItem('cdi.theme') || 'dark',
+  lang: localStorage.getItem('di.lang') || 'en',
+  theme: localStorage.getItem('di.theme') || 'light',
+  status: null,
+  sources: [],
+  sourceId: 'claude',
   sessions: [],
   workspaces: [],
   selectedId: null,
@@ -147,6 +156,7 @@ const state = {
   workspaceId: '',
   slotId: '',
   importing: false,
+  loading: true,
 };
 
 const t = (key, ...args) => {
@@ -154,51 +164,69 @@ const t = (key, ...args) => {
   return typeof value === 'function' ? value(...args) : value;
 };
 
-/* ── helpers ─────────────────────────────────────────────────────── */
-const api = async (path, options) => {
+/* ---------- helpers ---------- */
+async function api(path, options) {
   const response = await fetch(path, options);
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `${response.status} ${response.statusText}`);
   return body;
-};
+}
 
-const fmtNumber = (value) => new Intl.NumberFormat(state.lang === 'fa' ? 'fa-IR' : 'en-US').format(value || 0);
+const nf = () => new Intl.NumberFormat(state.lang === 'fa' ? 'fa-IR' : 'en-US');
+const fmtNumber = (value) => nf().format(value || 0);
 
-const fmtDate = (iso) => {
+function fmtDate(iso, withTime = false) {
   if (!iso) return '—';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';
   return new Intl.DateTimeFormat(state.lang === 'fa' ? 'fa-IR' : 'en-GB', {
     day: 'numeric', month: 'short', year: 'numeric',
+    ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
   }).format(date);
-};
+}
 
-const fmtSize = (bytes) => {
+function fmtSize(bytes) {
   if (!bytes) return '—';
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
+}
+
+const escapeHtml = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 const initials = (text) => (text || '?').trim().slice(0, 1).toUpperCase();
+
+function shortProject(session) {
+  if (!session) return '';
+  if (session.source === 'claude-export') return 'export';
+  const hint = session.projectHint || session.project || '';
+  const parts = hint.split(/[\\/]/).filter(Boolean);
+  return parts.slice(-2).join('/') || session.project || '';
+}
 
 function toast(message, kind = 'ok') {
   const node = document.createElement('div');
   node.className = `toast ${kind}`;
   node.textContent = message;
   $('#toasts').append(node);
-  setTimeout(() => node.remove(), 4200);
+  setTimeout(() => node.remove(), 4000);
 }
 
 async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
-    toast(t('copied'));
+    toast(t('copied'), 'ok');
   } catch {
-    /* clipboard may be blocked */
+    /* clipboard may be blocked on http origins */
   }
 }
 
-/* ── i18n / theme ────────────────────────────────────────────────── */
+/* ---------- theme / language ---------- */
+function applyTheme() {
+  document.documentElement.dataset.theme = state.theme;
+  localStorage.setItem('di.theme', state.theme);
+}
+
 function applyLang() {
   const html = document.documentElement;
   html.lang = state.lang;
@@ -213,44 +241,58 @@ function applyLang() {
   $$('[data-i18n-title]').forEach((node) => {
     node.title = I18N[state.lang][node.dataset.i18nTitle] || '';
   });
-  $$('.lang-switch button').forEach((button) => button.classList.toggle('active', button.dataset.lang === state.lang));
-  localStorage.setItem('cdi.lang', state.lang);
+  $$('.lang button').forEach((button) => button.classList.toggle('active', button.dataset.lang === state.lang));
+  localStorage.setItem('di.lang', state.lang);
+  renderSourceSelect();
   renderSessions();
   renderDetail();
   renderImportPanel();
   renderStatus();
 }
 
-function applyTheme() {
-  document.documentElement.dataset.theme = state.theme;
-  localStorage.setItem('cdi.theme', state.theme);
-}
-
-/* ── status ──────────────────────────────────────────────────────── */
+/* ---------- status ---------- */
 function renderStatus() {
-  const status = state.status;
-  const pills = [];
-  if (status) {
-    pills.push(`
-      <span class="pill" title="${status.claude.projects}">
-        <span class="dot ${status.claude.exists ? 'ok' : 'bad'}"></span>
-        <b>${t('claudeOk')}</b>&nbsp;${status.claude.exists ? '~/.claude/projects' : t('claudeMissing')}
-      </span>`);
-    pills.push(`
-      <span class="pill" title="${status.dsh.home}">
-        <span class="dot ${status.dsh.hasRegistry ? 'ok' : 'bad'}"></span>
-        <b>${t('dshOk')}</b>&nbsp;${status.dsh.hasRegistry ? status.dsh.home : t('dshMissing')}
-      </span>`);
+  if (!state.status) {
+    $('#statusRow').innerHTML = '';
+    return;
   }
-  $('#statusPills').innerHTML = pills.join('');
-  if (status) $('#claudeRootLabel').textContent = status.claude.projects;
+  const { dsh, sources } = state.status;
+  const claudeOk = sources.claudeExists;
+  $('#statusRow').innerHTML = `
+    <span class="status-chip" title="${escapeHtml(sources.claudeRoot)}">
+      <span class="dot ${claudeOk ? 'ok' : 'bad'}"></span>
+      <b>Claude</b> ${claudeOk ? 'local' : '—'}
+    </span>
+    <span class="status-chip" title="${escapeHtml(dsh.home)}">
+      <span class="dot ${dsh.hasRegistry ? 'ok' : 'bad'}"></span>
+      <b>${t('dsh')}</b> ${dsh.hasRegistry ? 'ready' : t('dshMissing')}
+    </span>`;
+  $('#rootLabel').textContent = sources.claudeRoot;
+  $('#rootDot').className = `dot ${claudeOk ? 'ok' : 'bad'}`;
 }
 
-/* ── session list ────────────────────────────────────────────────── */
+/* ---------- source picker ---------- */
+function renderSourceSelect() {
+  const select = $('#sourceSelect');
+  if (!state.sources.length) {
+    select.innerHTML = `<option>${t('loading')}</option>`;
+    return;
+  }
+  select.innerHTML = state.sources.map((source) => {
+    const label = source.available ? source.label : `${source.label} · ${t('soon')}`;
+    return `<option value="${source.id}" ${source.id === state.sourceId ? 'selected' : ''} ${source.available ? '' : 'disabled'}>${escapeHtml(label)}</option>`;
+  }).join('');
+  const upcoming = state.sources.filter((source) => !source.available).map((source) => source.label);
+  $('#sourceHint').textContent = upcoming.length ? `${t('moreSources')} ${upcoming.join(' · ')}` : '';
+}
+
+/* ---------- sessions ---------- */
 function filteredSessions() {
   const query = state.query.trim().toLowerCase();
   return state.sessions.filter((session) => {
-    if (state.filter !== 'all' && session.source !== state.filter) return false;
+    const isExport = session.source === 'claude-export';
+    if (state.filter === 'local' && isExport) return false;
+    if (state.filter === 'export' && !isExport) return false;
     if (!query) return true;
     return [session.name, session.project, session.projectHint, session.id]
       .filter(Boolean)
@@ -261,92 +303,88 @@ function filteredSessions() {
 function renderSessions() {
   const list = $('#sessionList');
   const sessions = filteredSessions();
-  $('#sessionsMeta').textContent = t('countSessions', sessions.length);
-  if (sessions.length === 0) {
-    list.innerHTML = `
-      <li class="empty-state" style="padding:32px 16px">
-        <div class="empty-glyph">◌</div>
-        <h3>${t('noSessions')}</h3>
-        <p class="muted">${t('noSessionsHint')}</p>
-      </li>`;
+  $('#sessionsMeta').textContent = state.loading ? t('scanning') : t('countSessions', sessions.length);
+
+  if (!sessions.length) {
+    list.innerHTML = `<li class="empty-list">
+      <strong>${t('noSessions')}</strong>
+      <span>${t('noSessionsHint')}</span>
+    </li>`;
     return;
   }
-  list.innerHTML = sessions.map((session) => `
-    <li class="session-card ${session.id === state.selectedId ? 'active' : ''}" data-id="${session.id}" data-source="${session.source}">
-      <div class="avatar">${initials(session.name)}</div>
-      <div class="session-main">
-        <div class="session-name" dir="auto">${escapeHtml(session.name || session.id)}</div>
-        <div class="session-sub">
+
+  list.innerHTML = sessions.map((session) => {
+    const kind = session.source === 'claude-export' ? 'export' : 'local';
+    return `<li class="session-item ${session.id === state.selectedId ? 'selected' : ''}"
+                data-id="${escapeHtml(session.id)}" data-kind="${kind}">
+      <span class="s-avatar">${initials(session.name)}</span>
+      <span class="s-main">
+        <span class="s-title">${escapeHtml(session.name || session.id)}</span>
+        <span class="s-sub">
           <span class="proj" dir="auto">${escapeHtml(shortProject(session))}</span>
           <span class="sep">·</span>
           <span dir="auto">${fmtDate(session.mtime)}</span>
-        </div>
-      </div>
-      <div class="session-side">
-        <div class="turns">${fmtNumber(session.stats?.turns || 0)}</div>
-        <div>${t('turns')}</div>
-      </div>
-    </li>`).join('');
+        </span>
+      </span>
+      <span class="s-side">
+        <span class="s-turns">${fmtNumber(session.stats?.turns || 0)}</span>
+        <span class="s-turns-label">${t('turns')}</span>
+      </span>
+    </li>`;
+  }).join('');
 }
 
-function shortProject(session) {
-  if (session.source === 'claude-export') return 'export';
-  const hint = session.projectHint || session.project || '';
-  const parts = hint.split(/[\\/]/).filter(Boolean);
-  return parts.slice(-2).join('/') || session.project;
-}
-
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-}
-
-/* ── detail ──────────────────────────────────────────────────────── */
+/* ---------- detail ---------- */
 function renderDetail() {
-  const detail = state.detail;
-  if (!detail) {
+  if (!state.detail) {
     $('#emptyState').hidden = false;
     $('#detailBody').hidden = true;
     return;
   }
   $('#emptyState').hidden = true;
   $('#detailBody').hidden = false;
-  const session = detail.session;
+
+  const session = state.detail.session;
+  const isExport = session.source === 'claude-export';
+  $('#detailBadges').innerHTML = `
+    <span class="badge">${escapeHtml(isExport ? 'Claude export' : 'Claude Code')}</span>
+    <span class="badge badge-muted">${escapeHtml(shortProject(session))}</span>`;
   $('#detailTitle').textContent = session.name || session.id;
   $('#detailMeta').innerHTML = [
     `<span><b>${fmtNumber(session.stats.turns)}</b> ${t('turns')}</span>`,
     `<span><b>${fmtNumber(session.stats.chars)}</b> ${t('chars')}</span>`,
     `<span><b>${fmtNumber(session.tokens)}</b> ${t('tokens')}</span>`,
     session.stats.toolCalls ? `<span><b>${fmtNumber(session.stats.toolCalls)}</b> ${t('tools')}</span>` : '',
-    `<span>${escapeHtml(shortProject(session))}</span>`,
     `<span dir="auto">${fmtDate(session.mtime)}</span>`,
   ].join('');
 
-  const transcript = $('#transcript');
-  const turns = detail.preview.turns || [];
-  transcript.innerHTML = turns.map((turn) => `
+  const turns = state.detail.preview?.turns || [];
+  $('#chat').innerHTML = turns.map((turn) => `
     <div class="turn">
-      <div class="msg user" dir="auto">
-        <div class="msg-role">${t('roleUser')}</div>${escapeHtml(turn.user)}
+      <div class="bubble bubble-user" dir="auto">
+        <div class="bubble-role">${t('roleUser')}</div>${escapeHtml(turn.user)}
       </div>
-      <div class="msg assistant" dir="auto">
-        <div class="msg-role">${t('roleAssistant')}</div>${escapeHtml(turn.assistant)}
+      <div class="bubble bubble-assistant" dir="auto">
+        <div class="bubble-role">${t('roleAssistant')}</div>${escapeHtml(turn.assistant)}
       </div>
-    </div>`).join('') + `
-    <div class="transcript-foot">
-      ${detail.preview.totalTurns > turns.length ? t('moreTurns', detail.preview.totalTurns - turns.length) : t('shownAll')}
-    </div>`;
+    </div>`).join('') + `<div class="chat-foot">${
+      (state.detail.preview?.totalTurns || 0) > turns.length
+        ? t('moreTurns', state.detail.preview.totalTurns - turns.length)
+        : t('shownAll')
+    }</div>`;
 
-  $('#statsGrid').innerHTML = [
-    ['turns', fmtNumber(session.stats.turns)],
-    ['messages', fmtNumber(session.stats.messages)],
-    ['chars', fmtNumber(session.stats.chars)],
-    ['tokens', fmtNumber(session.tokens)],
-    ['tools', fmtNumber(session.stats.toolCalls)],
-    ['size', fmtSize(session.sizeBytes)],
-    ['created', fmtDate(session.firstTimestamp || session.mtime)],
-    ['project', escapeHtml(shortProject(session))],
-  ].map(([key, value]) => `
-    <div class="stat"><div class="k">${t(key)}</div><div class="v">${value}</div></div>`).join('');
+  const stats = [
+    [t('turns'), fmtNumber(session.stats.turns)],
+    [t('messages'), fmtNumber(session.stats.messages)],
+    [t('chars'), fmtNumber(session.stats.chars)],
+    [t('tokens'), fmtNumber(session.tokens)],
+    [t('tools'), fmtNumber(session.stats.toolCalls)],
+    [t('size'), fmtSize(session.sizeBytes)],
+    [t('started'), fmtDate(session.firstTimestamp || session.mtime)],
+    [t('activity'), fmtDate(session.mtime)],
+  ];
+  $('#stats').innerHTML = stats.map(([k, v]) => `
+    <div class="stat"><div class="stat-k">${escapeHtml(k)}</div><div class="stat-v">${v}</div></div>`).join('');
 }
 
 async function selectSession(id) {
@@ -354,7 +392,7 @@ async function selectSession(id) {
   state.selectedId = id;
   renderSessions();
   try {
-    state.detail = await api(`/api/sessions/${encodeURIComponent(id)}`);
+    state.detail = await api(`/api/sessions/${encodeURIComponent(id)}?source=${encodeURIComponent(state.sourceId)}`);
   } catch (error) {
     toast(`${t('importFailed')}: ${error.message}`, 'err');
     return;
@@ -363,69 +401,60 @@ async function selectSession(id) {
   renderImportPanel();
 }
 
-/* ── import panel ────────────────────────────────────────────────── */
-function currentWorkspace() {
-  return state.workspaces.find((workspace) => workspace.id === state.workspaceId) || null;
-}
-
-function blankSlots(workspace) {
-  if (!workspace) return [];
-  return workspace.sessions.filter((session) => session.blank || !session.exists);
-}
+/* ---------- import panel ---------- */
+const currentWorkspace = () => state.workspaces.find((workspace) => workspace.id === state.workspaceId) || null;
+const blankSlots = (workspace) =>
+  (workspace?.sessions || []).filter((session) => session.blank || !session.exists);
 
 function renderImportPanel() {
   const workspaceSelect = $('#workspaceSelect');
-  if (state.workspaces.length === 0) {
-    workspaceSelect.innerHTML = `<option value="">${t('noWorkspace')}</option>`;
-  } else {
-    workspaceSelect.innerHTML = state.workspaces.map((workspace) =>
-      `<option value="${workspace.id}" ${workspace.id === state.workspaceId ? 'selected' : ''}>${escapeHtml(workspace.title)} — ${escapeHtml(workspace.path)}</option>`).join('');
-  }
+  workspaceSelect.innerHTML = state.workspaces.length
+    ? state.workspaces.map((workspace) => `<option value="${workspace.id}" ${workspace.id === state.workspaceId ? 'selected' : ''}>${escapeHtml(workspace.title)}</option>`).join('')
+    : `<option value="">${t('noWorkspace')}</option>`;
+  workspaceSelect.disabled = state.workspaces.length === 0;
 
   const workspace = currentWorkspace();
   const slots = blankSlots(workspace);
   const slotSelect = $('#slotSelect');
-  const slotHint = $('#slotHint');
-  const modeHint = $('#modeHint');
-  modeHint.textContent = state.mode === 'adopt' ? t('adoptHint') : t('registerHint');
+
+  $('#modeHint').textContent = state.mode === 'adopt' ? t('adoptHint') : t('registerHint');
 
   if (state.mode !== 'adopt') {
     slotSelect.innerHTML = '<option value="">—</option>';
     slotSelect.disabled = true;
-    slotHint.textContent = '';
-  } else if (slots.length === 0) {
+  } else if (!slots.length) {
     slotSelect.innerHTML = '<option value="">—</option>';
     slotSelect.disabled = true;
-    slotHint.textContent = '';
   } else {
     slotSelect.disabled = false;
-    slotSelect.innerHTML = slots.map((slot) => `<option value="${slot.id}" ${slot.id === state.slotId ? 'selected' : ''}>${slot.id.replace('session-', '').slice(0, 8)}${slot.turns ? ` · ${slot.turns} turns` : ' · empty'}</option>`).join('');
-    slotHint.textContent = '';
+    slotSelect.innerHTML = slots.map((slot) => {
+      const short = slot.id.replace('session-', '').slice(0, 8);
+      const label = slot.turns ? `${short} · ${slot.turns} ${t('turns')}` : `${short} · empty`;
+      return `<option value="${slot.id}" ${slot.id === state.slotId ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('');
   }
 
   $('#workspaceHint').textContent = workspace ? workspace.path : t('noWorkspace');
-  $('#slotField').hidden = state.mode !== 'adopt';
 
   const warn = $('#warn');
   if (state.mode === 'adopt' && workspace && slots.length === 0) {
     warn.hidden = false;
-    warn.textContent = t('noSlots');
+    $('#warnText').textContent = t('noSlots');
   } else {
     warn.hidden = true;
   }
 
-  const busy = state.importing;
-  const canImport = !!state.detail && !!workspace && (state.mode === 'register' || slots.length > 0) && !busy;
+  const canImport = Boolean(state.detail) && Boolean(workspace) &&
+    (state.mode === 'register' || slots.length > 0) && !state.importing;
   const button = $('#importBtn');
   button.disabled = !canImport;
-  button.classList.toggle('busy', busy);
-  $('span', button).textContent = busy ? t('importBusy') : t('importButton');
+  $('#importBtnLabel').textContent = state.importing ? t('importBusy') : t('importButton');
 
+  const titleInput = $('#titleInput');
   if (!state.detail) {
-    $('#titleInput').value = '';
-  } else if (!$('#titleInput').dataset.touched) {
-    const project = shortProject(state.detail.session).split('/').pop();
-    $('#titleInput').value = `Claude import · ${project || 'session'}`;
+    titleInput.value = '';
+  } else if (!titleInput.dataset.touched) {
+    titleInput.value = `Claude import · ${shortProject(state.detail.session).split('/').pop() || 'session'}`;
   }
 }
 
@@ -433,7 +462,8 @@ async function importSession() {
   if (!state.detail || !currentWorkspace()) return;
   state.importing = true;
   renderImportPanel();
-  const body = {
+  const payload = {
+    source: state.sourceId,
     sessionId: state.detail.session.id,
     workspaceId: state.workspaceId,
     mode: state.mode,
@@ -447,14 +477,14 @@ async function importSession() {
       result = await api('/api/import', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
     } catch (error) {
       if (String(error.message).includes('already contains a conversation') && confirm(t('overwriteConfirm'))) {
         result = await api('/api/import', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ ...body, force: true }),
+          body: JSON.stringify({ ...payload, force: true }),
         });
       } else {
         throw error;
@@ -475,32 +505,43 @@ function showResult(result) {
   const box = $('#result');
   box.hidden = false;
   if (result.error) {
-    box.className = 'result error';
-    box.innerHTML = `<h4>${t('importFailed')}</h4><div class="muted">${escapeHtml(result.error)}</div>`;
+    box.className = 'result is-error';
+    box.innerHTML = `
+      <div class="result-title">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        ${t('importFailed')}
+      </div>
+      <div class="result-rows"><div class="result-row">${escapeHtml(result.error)}</div></div>`;
     return;
   }
   box.className = 'result';
   box.innerHTML = `
-    <h4>✓ ${t('importDone')}</h4>
-    <div class="row"><span>${t('turns')}</span><span>${fmtNumber(result.stats.turns)}${result.stats.droppedTurns ? ` (+${result.stats.droppedTurns} dropped)` : ''}</span></div>
-    <div class="row"><span>${t('tokens')}</span><span>${fmtNumber(result.stats.tokens)}</span></div>
-    <div class="row"><span>id</span><code>${escapeHtml(result.sessionId)}</code></div>
-    <div class="actions">
-      <button id="copyResultBtn">${t('copy')}</button>
-      <button id="openDshBtn">${t('openIn')} ${escapeHtml(result.workspace.title)}</button>
+    <div class="result-title">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>
+      ${t('importDone')}
     </div>
-    ${result.restartRequired ? `<div class="warn" style="margin:4px 0 0">${t('restartNeeded')}</div>` : ''}`;
-  $('#copyResultBtn').addEventListener('click', () => copyText(result.sessionId));
-  $('#openDshBtn').addEventListener('click', () => openDsh(result.workspace.path));
+    <div class="result-rows">
+      <div class="result-row"><span>${t('turns')}</span><b>${fmtNumber(result.stats.turns)}${
+        result.stats.droppedTurns ? ` <span class="muted">(${t('dropped', result.stats.droppedTurns)})</span>` : ''
+      }</b></div>
+      <div class="result-row"><span>${t('tokens')}</span><b>${fmtNumber(result.stats.tokens)}</b></div>
+      <div class="result-row"><span>${t('workspace')}</span><b>${escapeHtml(result.workspace.title)}</b></div>
+    </div>
+    <code>${escapeHtml(result.sessionId)}</code>
+    <div class="result-actions">
+      <button class="btn btn-xs" id="copyResultBtn">${t('copy')}</button>
+      <button class="btn btn-xs" id="openDshBtn">${t('openIn')} ↗</button>
+    </div>
+    ${result.restartRequired ? `<div class="alert alert-warning" style="margin-top:2px"><span>${t('restartNeeded')}</span></div>` : ''}`;
+
+  $('#copyResultBtn')?.addEventListener('click', () => copyText(result.sessionId));
+  $('#openDshBtn')?.addEventListener('click', () => {
+    const url = state.status?.dsh?.webUrl || 'http://127.0.0.1:10342';
+    window.open(url, '_blank', 'noreferrer');
+  });
 }
 
-function openDsh(workspacePath) {
-  const status = state.status;
-  const base = status?.dsh?.webUrl || 'http://127.0.0.1:10342';
-  window.open(base, '_blank', 'noreferrer');
-}
-
-/* ── data loading ────────────────────────────────────────────────── */
+/* ---------- loads ---------- */
 async function loadStatus() {
   try {
     state.status = await api('/api/status');
@@ -510,11 +551,33 @@ async function loadStatus() {
   renderStatus();
 }
 
-async function loadSessions() {
-  const query = state.sidechains ? '?sidechains=1' : '';
-  const data = await api(`/api/sessions${query}`);
-  state.sessions = data.sessions;
+async function loadSources() {
+  try {
+    const data = await api('/api/sources');
+    state.sources = data.sources;
+    state.sourceId = data.default;
+  } catch {
+    state.sources = [];
+  }
+  renderSourceSelect();
+}
+
+async function loadSessions({ fresh = false } = {}) {
+  state.loading = true;
   renderSessions();
+  try {
+    const query = new URLSearchParams({ source: state.sourceId });
+    if (state.sidechains) query.set('sidechains', '1');
+    if (fresh) query.set('fresh', '1');
+    const data = await api(`/api/sessions?${query.toString()}`);
+    state.sessions = data.sessions;
+  } catch (error) {
+    state.sessions = [];
+    toast(error.message, 'err');
+  } finally {
+    state.loading = false;
+    renderSessions();
+  }
 }
 
 async function loadWorkspaces() {
@@ -527,13 +590,12 @@ async function loadWorkspaces() {
   if (!state.workspaces.some((workspace) => workspace.id === state.workspaceId)) {
     state.workspaceId = state.workspaces[0]?.id || '';
   }
-  const workspace = currentWorkspace();
-  const slots = blankSlots(workspace);
+  const slots = blankSlots(currentWorkspace());
   if (!slots.some((slot) => slot.id === state.slotId)) state.slotId = slots[0]?.id || '';
   renderImportPanel();
 }
 
-/* ── events ──────────────────────────────────────────────────────── */
+/* ---------- events ---------- */
 function bindEvents() {
   $('#search').addEventListener('input', (event) => {
     state.query = event.target.value;
@@ -549,8 +611,8 @@ function bindEvents() {
   });
 
   $('#sessionList').addEventListener('click', (event) => {
-    const card = event.target.closest('.session-card');
-    if (card) selectSession(card.dataset.id);
+    const item = event.target.closest('.session-item');
+    if (item) selectSession(item.dataset.id);
   });
 
   $$('.chip').forEach((chip) => chip.addEventListener('click', () => {
@@ -561,12 +623,22 @@ function bindEvents() {
 
   $('#sidechains').addEventListener('change', async (event) => {
     state.sidechains = event.target.checked;
-    await loadSessions();
+    await loadSessions({ fresh: true });
   });
 
   $('#refreshBtn').addEventListener('click', async () => {
-    await Promise.all([loadSessions(), loadWorkspaces(), loadStatus()]);
-    toast(t('countSessions', state.sessions.length));
+    await Promise.all([loadSessions({ fresh: true }), loadWorkspaces(), loadStatus()]);
+    toast(t('countSessions', state.sessions.length), 'ok');
+  });
+
+  $('#sourceSelect').addEventListener('change', async (event) => {
+    state.sourceId = event.target.value;
+    state.selectedId = null;
+    state.detail = null;
+    renderDetail();
+    await loadSessions({ fresh: true });
+    if (state.sessions[0]) await selectSession(state.sessions[0].id);
+    renderImportPanel();
   });
 
   $('#themeBtn').addEventListener('click', () => {
@@ -574,7 +646,7 @@ function bindEvents() {
     applyTheme();
   });
 
-  $$('.lang-switch button').forEach((button) => button.addEventListener('click', () => {
+  $$('.lang button').forEach((button) => button.addEventListener('click', () => {
     state.lang = button.dataset.lang;
     applyLang();
   }));
@@ -608,8 +680,8 @@ function bindEvents() {
   $$('.tab').forEach((tab) => tab.addEventListener('click', () => {
     $$('.tab').forEach((other) => other.classList.toggle('active', other === tab));
     const stats = tab.dataset.view === 'stats';
-    $('#transcript').hidden = stats;
-    $('#statsGrid').hidden = !stats;
+    $('#chat').hidden = stats;
+    $('#stats').hidden = !stats;
   }));
 
   $('#uploadBtn').addEventListener('click', () => $('#fileInput').click());
@@ -617,14 +689,15 @@ function bindEvents() {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const text = await file.text();
+      const json = await file.text();
       const result = await api('/api/export', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ json: text }),
+        body: JSON.stringify({ json, source: state.sourceId }),
       });
-      toast(t('exportUploaded', result.imported));
-      await loadSessions();
+      toast(t('exportUploaded', result.imported), 'ok');
+      await loadSessions({ fresh: true });
+      if (state.sessions[0]) await selectSession(state.sessions[0].id);
     } catch (error) {
       toast(`${t('exportFailed')}: ${error.message}`, 'err');
     } finally {
@@ -633,7 +706,7 @@ function bindEvents() {
   });
 }
 
-/* ── boot ────────────────────────────────────────────────────────── */
+/* ---------- boot ---------- */
 const params = new URLSearchParams(location.search);
 if (params.get('lang') === 'fa' || params.get('lang') === 'en') state.lang = params.get('lang');
 if (params.get('theme') === 'light' || params.get('theme') === 'dark') state.theme = params.get('theme');
@@ -641,13 +714,14 @@ if (params.get('theme') === 'light' || params.get('theme') === 'dark') state.the
 applyTheme();
 applyLang();
 bindEvents();
-renderSessions();
 
 (async () => {
   await loadStatus();
-  await Promise.all([loadSessions(), loadWorkspaces()]);
+  await loadSources();
+  await Promise.all([loadSessions({ fresh: true }), loadWorkspaces()]);
   const requested = params.get('session');
-  const first = requested && state.sessions.some((session) => session.id === requested) ? requested : state.sessions[0]?.id;
+  const first = requested && state.sessions.some((session) => session.id === requested)
+    ? requested
+    : state.sessions[0]?.id;
   if (first) await selectSession(first);
 })();
-

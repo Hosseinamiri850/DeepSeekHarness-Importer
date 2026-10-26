@@ -81,7 +81,12 @@ test('dashboard API: discover, preview, adopt, register', async (t) => {
 
   const status = await (await fetch(`${url}/api/status`)).json();
   assert.equal(status.dsh.hasRegistry, true);
-  assert.equal(status.claude.exists, true);
+  assert.equal(status.sources.claudeExists, true);
+
+  const sources = await (await fetch(`${url}/api/sources`)).json();
+  assert.equal(sources.default, 'claude');
+  assert.equal(sources.sources.find((source) => source.id === 'claude').available, true);
+  assert.equal(sources.sources.filter((source) => source.available).length, 1, 'only Claude ships in v0.2');
 
   const list = await (await fetch(`${url}/api/sessions`)).json();
   assert.equal(list.count, 1);

@@ -1,6 +1,8 @@
 # User guide
 
-A step-by-step walkthrough for moving one Claude conversation into DeepSeek Harness (DSH).
+A step-by-step walkthrough for moving a conversation into DeepSeek Harness (DSH).
+This release ships one source, **Claude**; the source picker in the dashboard lists
+the other tools that are planned.
 
 ## 1. What you need
 
@@ -18,7 +20,7 @@ No account, API key, or internet connection is required — everything runs loca
 node src/cli.js
 ```
 
-Or, once published: `npx claude-to-dsh-importer`. The terminal prints the URL, and
+Or, once published: `npx deepseekharness-importer`. The terminal prints the URL, and
 your browser opens it. Use `--port 4173` for a fixed port, `--no-open` to stay in
 the terminal.
 
@@ -29,7 +31,11 @@ The header shows two status pills:
   exists. A red dot means DSH has not been opened on this machine yet, or
   `DSH_HOME` points elsewhere.
 
-## 3. Where your Claude sessions come from
+## 3. Where your sessions come from
+
+The **Source** menu above the session list decides where the importer looks. In
+v0.2 only **Claude** is selectable; ChatGPT, Gemini, GitHub Copilot, Cursor and
+Codex CLI are listed as *coming soon* and cannot be picked yet.
 
 ### Claude Code / Claude Desktop local agent
 

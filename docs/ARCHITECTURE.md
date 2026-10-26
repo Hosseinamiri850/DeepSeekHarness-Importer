@@ -2,9 +2,27 @@
 
 ## Purpose
 
-Move a Claude conversation into DeepSeek Harness so that DSH can **resume** it.
-That requires producing a log DSH's reader accepts *and* making the workspace
-registry point at it.
+Move a conversation from another AI tool into DeepSeek Harness so that DSH can
+**resume** it. That requires producing a log DSH's reader accepts *and* making the
+workspace registry point at it.
+
+## Sources
+
+Every supported tool is one entry in `core/sources.js`:
+
+```js
+{
+  id: 'claude', label: 'Claude', vendor: 'Anthropic',
+  available: true, kind: 'local',
+  discover: ({ includeSidechains }) => [...],   // session list
+  load: (session) => turns,                     // [{ user, assistant[] }]
+  parseExport: (json) => [...],                 // optional, file exports
+}
+```
+
+`available: false` entries are shown in the dashboard picker as *coming soon* and
+answer `501` on the API. Everything downstream — conversion, validation, install,
+UI rendering — is source-agnostic: it consumes `turns` and nothing else.
 
 ## Data flow
 
@@ -17,8 +35,8 @@ conversations.json (export)   ─┴─► parse → turns → rows → zstd ─
                                                    workspace.json ◄───────────┘ (register mode only)
 ```
 
-1. **Discover** — `core/claude.js` walks the projects root, parses each JSONL, and
-   keeps a per-file cache keyed by `mtime` + size.
+1. **Discover** — the active source lists sessions (`core/claude.js` walks the
+   projects root, parses each JSONL, and caches per file by `mtime` + size).
 2. **Normalise** — messages become `{ role, text }`, grouped into turns. Transport
    noise is removed: `API Error: 4xx/5xx`, `No response requested.`,
    `<system-reminder>`, local-command output, interrupted-request notices. Sidechain
@@ -81,12 +99,16 @@ passes `force: true`, and the previous log is copied to
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/status` | Node version, Claude root, DSH home/registry detection |
-| GET | `/api/sessions?sidechains=1` | List discoverable sessions with stats |
-| GET | `/api/sessions/:id` | Summary + transcript preview (first 40 turns) |
+| GET | `/api/status` | Node version, source roots, DSH home/registry detection |
+| GET | `/api/sources` | Source registry with availability |
+| GET | `/api/sessions?source=claude&sidechains=1` | List discoverable sessions with stats |
+| GET | `/api/sessions/:id?source=claude` | Summary + transcript preview (first 40 turns) |
 | GET | `/api/workspaces` | Workspaces, their sessions, blank-slot info, orphan logs |
-| POST | `/api/export` | Parse an uploaded `conversations.json` into in-memory sessions |
+| POST | `/api/export` | Parse an uploaded data export (`{ json, source }`) |
 | POST | `/api/import` | Build, validate, write, and optionally register a session |
+
+`source` defaults to `claude`; an unavailable source answers `501` before any file
+is touched.
 
 The server binds to loopback, serves `src/web` statically, and makes no outbound
 requests.

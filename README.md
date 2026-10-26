@@ -1,24 +1,42 @@
-# Claude → DeepSeek Harness Importer
+# DeepSeekHarness-Importer
 
-**Move your Claude conversations into [DeepSeek Harness](https://github.com/deepseek-ai) as native, resumable sessions — from a local dashboard, without uploading anything.**
+**Bring conversations from other AI tools into [DeepSeek Harness](https://github.com/deepseek-ai) as native, resumable sessions — from a local dashboard, without uploading anything.**
 
-![Dashboard](assets/dashboard-dark.png)
+Today it imports **Claude**. The source picker and the conversion pipeline are built for more: ChatGPT, Gemini, Copilot, Cursor and Codex are already listed in the UI as coming soon.
 
-[فارسی](README.fa.md) · [User guide](docs/USER-GUIDE.md) · [راهنمای فارسی](docs/USER-GUIDE.fa.md)
+![Dashboard](assets/dashboard-light.png)
+
+[فارسی](README.fa.md) · [User guide](docs/USER-GUIDE.md) · [راهنمای فارسی](docs/USER-GUIDE.fa.md) · [Architecture](docs/ARCHITECTURE.md)
 
 ---
 
 DeepSeek Harness (DSH) keeps its sessions in an append-only JSONL log compressed
 with Zstandard, and it only lists a session when the workspace registry names it.
-There is no import button. This tool closes that gap: it reads your Claude
-transcripts, converts the conversation into DSH's **format v4** session log, and
-installs it into a workspace you pick — so the session opens in DSH with its
-history, and you can keep working from where Claude stopped.
+There is no import button. This tool closes that gap: it reads a transcript,
+converts the conversation into DSH's **format v4** session log, and installs it
+into a workspace you pick — so the session opens in DSH with its history and you
+keep working from where the other tool stopped.
+
+## Sources
+
+| Source | Status | How it is read |
+|---|---|---|
+| **Claude** | ✅ available | Claude Code / Claude Desktop local transcripts under `~/.claude/projects`, plus account exports (`conversations.json`) |
+| ChatGPT | 🕓 planned | data export |
+| Gemini | 🕓 planned | Takeout / activity export |
+| GitHub Copilot | 🕓 planned | CLI transcripts |
+| Cursor | 🕓 planned | chat / composer sessions |
+| Codex CLI | 🕓 planned | rollout transcripts |
+
+The dashboard always shows the full list so you can see the direction; only
+available sources can be selected. Adding one is a registry entry plus a
+discovery/parse pair — the converter, installer, and UI stay untouched
+(see [CONTRIBUTING](CONTRIBUTING.md#adding-a-source)).
 
 ## Why it exists
 
-Moving a chat between AI tools is usually copy/paste, which loses the shape of
-the conversation and floods the context window. This importer keeps the turn
+Moving a chat between AI tools is usually copy/paste, which loses the shape of the
+conversation and floods the context window. This importer keeps the turn
 structure, respects DSH's validation rules, and — crucially — deals with the two
 things that make a hand-made session invisible:
 
@@ -30,22 +48,22 @@ things that make a hand-made session invisible:
 ## Features
 
 - **See every session you have.** Auto-discovers Claude Code / Claude Desktop
-  local-agent transcripts under `~/.claude/projects`, plus any `conversations.json`
-  from *Claude → Settings → Privacy → Export data*.
-- **Preview before you commit.** Full transcript view and stats (turns,
-  characters, estimated tokens, tool calls, project, size).
-- **Fit the budget.** Keep the newest N characters of history (50k → everything);
-  the rest is dropped with an explicit count, because resuming replays history
-  into every request.
-- **Two install modes**, matching how DSH actually works:
-  - **Existing slot** — reuses an empty session row of the workspace and appears
-    immediately; no restart.
-  - **New session** — allocates a fresh id and registers it; needs one DSH restart.
+  local-agent transcripts, and imports `conversations.json` from
+  *Claude → Settings → Privacy → Export data*.
+- **Preview before you commit.** Chat-style transcript plus stats: turns,
+  characters, estimated tokens, tool calls, size, project, last activity.
+- **Fit the budget.** Keep the newest N characters (50k → everything); dropped
+  turns are reported, because a resumed session replays history every request.
+- **Two install modes** matching how DSH actually works:
+  - **Existing slot** — reuses an empty session row of the workspace; visible
+    immediately, no restart.
+  - **New session** — allocates and registers a fresh id; needs one DSH restart.
 - **Backups, always.** Overwriting a slot saves the previous log under
   `~/.dsh/backups/claude-import/`; registry edits are backed up too.
-- **Local only.** The server binds to `127.0.0.1`, never calls the network, and
-  reads files on this machine only.
-- **Bilingual UI** (English / فارسی, with RTL layout) and dark / light themes.
+- **Local only.** Binds to `127.0.0.1`, makes no outbound requests, reads files on
+  this machine only.
+- **Bilingual UI** (English / فارسی, RTL-aware) with light and dark themes, built
+  on a shadcn-style token system in plain CSS — no build step, no dependencies.
 
 ## Quick start
 
@@ -53,28 +71,28 @@ things that make a hand-made session invisible:
 # Node.js 22.15+ is required (built-in Zstandard)
 node --version
 
-npx claude-to-dsh-importer        # or: node src/cli.js
+npx deepseekharness-importer        # or: node src/cli.js
 ```
-
-The dashboard opens on a free loopback port. Then:
-
-1. Pick a session on the left.
-2. Choose a DSH workspace (existing workspaces are read from your registry).
-3. Pick **Existing slot** and press **Import session**.
-4. Open DSH, refresh, and the session is under that workspace.
 
 From a clone:
 
 ```bash
-git clone https://github.com/Hosseinamiri850/Claude-to-DeepSeekHarness-Importer.git
-cd Claude-to-DeepSeekHarness-Importer
+git clone https://github.com/Hosseinamiri850/DeepSeekHarness-Importer.git
+cd DeepSeekHarness-Importer
 node src/cli.js --port 4173 --no-open
 ```
+
+Then:
+
+1. Pick a session on the left.
+2. Choose a DSH workspace (read from your registry).
+3. Keep **Existing slot** and press **Import session**.
+4. Refresh DSH — the session is under that workspace.
 
 ### CLI
 
 ```
-claude-to-dsh [options]
+deepseekharness-importer [options]
 
   -p, --port <port>   listen on a fixed port (default: a free port)
       --host <host>   loopback address to bind (default: 127.0.0.1)
@@ -84,25 +102,28 @@ claude-to-dsh [options]
 ```
 
 Environment variables: `DSH_HOME` (defaults to `~/.dsh`), `CLAUDE_PROJECTS_DIR`
-(defaults to `~/.claude/projects`), `DSH_WEB_URL` (used by the "Open DSH" button).
+(defaults to `~/.claude/projects`), `DSH_WEB_URL` (used by the "Open DeepSeek
+Harness" button).
 
 ## Screenshots
 
-| Light theme | فارسی (RTL) |
+| Light | Dark |
 |---|---|
-| ![Light](assets/dashboard-light.png) | ![Persian](assets/dashboard-fa.png) |
+| ![Light](assets/dashboard-light.png) | ![Dark](assets/dashboard-dark.png) |
 
-<p align="center"><img src="assets/dashboard-mobile.png" width="360" alt="Mobile layout" /></p>
+| فارسی (RTL) | Mobile |
+|---|---|
+| ![Persian](assets/dashboard-fa.png) | ![Mobile](assets/dashboard-mobile.png) |
 
 ## How it works
 
 ```
-~/.claude/projects/**/*.jsonl ──► transcript parser ──► DSH v4 rows ──► zstd frames
-conversations.json (export)   ──┘                          │
-                                                           ▼
-                              ~/.dsh/sessions/--<project>--/session-<uuid>/session.v4.jsonl.zstd
-                                                           │
-                              ~/.dsh/storages/workspace.json (only in "new session" mode)
+~/.claude/projects/**/*.jsonl ──┐
+conversations.json (export)   ──┴─► transcript parser ──► DSH v4 rows ──► zstd frames
+                                                                             │
+                        ~/.dsh/sessions/--<project>--/session-<uuid>/session.v4.jsonl.zstd
+                                                                             │
+                        ~/.dsh/storages/workspace.json  (only in "new session" mode)
 ```
 
 The emitted log contains a version-4 header, the session-level defaults
@@ -119,9 +140,9 @@ array, turn ordering. Failures are reported instead of installing a broken sessi
 
 | Preserved | Not preserved |
 |---|---|
-| Human and assistant text, in order | Claude tool calls and their results |
-| Original project path (DSH shows it under that workspace) | Images, attachments, artifacts |
-| Session title, permission/sandbox/approval defaults | Claude's model provenance and signatures |
+| Human and assistant text, in order | Tool calls and their results |
+| Original project path (DSH groups by workspace) | Images, attachments, artifacts |
+| Session title, permission/sandbox/approval defaults | Model provenance and signatures |
 | Turn boundaries and last-active time | Checkpoints and sidechains (unless enabled) |
 
 Transport noise (`API Error: 4xx/5xx`, `No response requested.`, system reminders,
@@ -129,25 +150,32 @@ local-command output) is stripped so it does not become a fake assistant turn.
 
 ## Compatibility
 
-- **Node.js 22.15+** — the importer uses the built-in Zstandard API
-  (`zlib.zstdCompressSync`). No native dependencies, no build step.
+- **Node.js 22.15+** — uses the built-in Zstandard API. No native dependencies, no
+  build step.
 - **DSH session format v4**, the format written by current DeepSeek Harness builds.
-  Older DSH releases migrate v0–v3 logs on read, but this tool targets v4.
-- **Windows, macOS, Linux** — paths are resolved from `os.homedir()` and can be
-  overridden with environment variables.
+- **Windows, macOS, Linux** — paths come from `os.homedir()` and can be overridden.
+
+## Roadmap
+
+- [x] Claude — local transcripts and data exports
+- [ ] ChatGPT data export
+- [ ] Gemini / Takeout
+- [ ] Cursor and Copilot local sessions
+- [ ] Saveable import presets (workspace + budget per source)
+- [ ] CLI parity: `deepseekharness-importer import --all`
 
 ## Safety
 
-- Reads only `~/.claude/**` and writes only inside `DSH_HOME`.
+- Reads only the selected source's data directory; writes only inside `DSH_HOME`.
 - Every destructive write keeps a backup first.
 - A slot that already holds a conversation is refused unless you explicitly
   confirm the overwrite (the UI asks; the API returns `409`).
-- The HTTP server refuses to bind anything but loopback in the default CLI path.
+- The HTTP server binds to loopback.
 
 ## Development
 
 ```bash
-node --test "test/**/*.test.js"    # 7 tests: conversion, zstd round-trip, HTTP API
+node --test "test/**/*.test.js"    # conversion, zstd round-trip, HTTP API
 node src/cli.js --port 4599 --no-open
 ```
 
@@ -158,22 +186,13 @@ src/
   cli.js              entry point, argument parsing, browser launch
   server.js           HTTP API + static file server
   core/claude.js      discovery and transcript parsing (Claude Code + export)
+  core/sources.js     source registry (Claude now, more later)
   core/convert.js     turns → DSH v4 rows, budget, validation
   core/dsh.js         workspace registry, install, backups
   core/zstd.js        zstd frame scanner / encoder
   core/paths.js       home detection and project directory naming
-  web/                dashboard (vanilla JS, no build)
+  web/                dashboard (vanilla JS, shadcn-style CSS tokens)
 ```
-
-## Limitations
-
-- Claude Desktop's *regular chat history* lives in Chromium IndexedDB, not in
-  `~/.claude`. Export it from **Settings → Privacy → Export data** and upload the
-  `conversations.json` in the dashboard.
-- Importing a very long history costs tokens on the first resumed request; use the
-  budget selector.
-- Tool calls are not replayed, so an imported session cannot continue a half-done
-  tool action — Claude's tool state is simply not representable in a new log.
 
 ## License
 
